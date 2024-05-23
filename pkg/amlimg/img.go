@@ -1,17 +1,51 @@
 package amlimg
 
 import (
+	"encoding/binary"
+	"fmt"
 	"io"
 )
 
+const (
+	Magic = uint32(0x27B51956)
+)
+
+type ImgHeader struct {
+	CRC       uint32
+	Version   uint32
+	Magic     uint32
+	Size      uint64
+	AlignSize uint32
+	ItemCount uint32
+	Reserved  [36]byte
+}
+
+func (header *ImgHeader) FillFrom(reader io.Reader) error {
+	err := binary.Read(reader, binary.LittleEndian, header)
+	if err != nil {
+		return err
+	}
+
+	if header.Magic != Magic {
+		return fmt.Errorf("invalid magic: %x", header.Magic)
+	}
+
+	return nil
+}
+
+func ReadHeader(reader io.Reader) (*ImgHeader, error) {
+	header := ImgHeader{}
+	return &header, header.FillFrom(reader)
+}
+
 type Img struct {
-	*Header
+	*ImgHeader
 	Items []Item
 }
 
-func NewImg(header *Header) *Img {
+func NewImg(header *ImgHeader) *Img {
 	return &Img{
-		Header: header,
+		ImgHeader: header,
 	}
 }
 
